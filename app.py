@@ -152,7 +152,7 @@ def load_ml_model():
 def load_dl_model():
     try:
         import tensorflow as tf
-        model     = tf.keras.models.load_model("models/best_dl_model.keras")
+        model     = tf.keras.models.load_model("models/best_dl_model.h5")
         tokenizer = pickle.load(open("models/dl_tokenizer.pkl","rb"))
         meta      = pickle.load(open("models/dl_metadata.pkl","rb"))
         return model, tokenizer, meta, True
