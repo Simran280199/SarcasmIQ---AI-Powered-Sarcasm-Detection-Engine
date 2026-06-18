@@ -152,11 +152,16 @@ def load_ml_model():
 def load_dl_model():
     try:
         import tensorflow as tf
-        model     = tf.keras.models.load_model("models/best_dl_model.h5")
+        import os
+        h5_path = "models/best_dl_model.h5"
+        # Guard: LFS pointer files are ~130 bytes, real model is ~40MB
+        if not os.path.exists(h5_path) or os.path.getsize(h5_path) < 10_000:
+            return None, None, {}, False
+        model     = tf.keras.models.load_model(h5_path, compile=False)
         tokenizer = pickle.load(open("models/dl_tokenizer.pkl","rb"))
         meta      = pickle.load(open("models/dl_metadata.pkl","rb"))
         return model, tokenizer, meta, True
-    except Exception as e:
+    except Exception:
         return None, None, {}, False
 
 tfidf, ml_model, ml_meta, ML_OK   = load_ml_model()
