@@ -151,15 +151,20 @@ def load_ml_model():
 @st.cache_resource
 def load_dl_model():
     try:
-        import tensorflow as tf
-        import os
-        h5_path = "models/best_dl_model.h5"
-        # Guard: LFS pointer files are ~130 bytes, real model is ~40MB
-        if not os.path.exists(h5_path) or os.path.getsize(h5_path) < 10_000:
+        import tensorflow as tf, os
+        saved_model_path = "models/saved_model"
+        h5_path          = "models/best_dl_model.h5"
+        keras_path       = "models/best_dl_model.keras"
+        if os.path.isdir(saved_model_path):
+            model = tf.saved_model.load(saved_model_path)
+        elif os.path.exists(h5_path) and os.path.getsize(h5_path) > 10_000:
+            model = tf.keras.models.load_model(h5_path, compile=False)
+        elif os.path.exists(keras_path) and os.path.getsize(keras_path) > 10_000:
+            model = tf.keras.models.load_model(keras_path, compile=False)
+        else:
             return None, None, {}, False
-        model     = tf.keras.models.load_model(h5_path, compile=False)
-        tokenizer = pickle.load(open("models/dl_tokenizer.pkl","rb"))
-        meta      = pickle.load(open("models/dl_metadata.pkl","rb"))
+        tokenizer = pickle.load(open("models/dl_tokenizer.pkl", "rb"))
+        meta      = pickle.load(open("models/dl_metadata.pkl", "rb"))
         return model, tokenizer, meta, True
     except Exception:
         return None, None, {}, False
@@ -180,7 +185,13 @@ def predict_dl(text):
     seq    = dl_tokenizer.texts_to_sequences([clean_text_dl(text)])
     padded = pad_sequences(seq, maxlen=dl_meta.get("max_len",40),
                            padding="post", truncating="post")
-    p = float(dl_model.predict(padded, verbose=0)[0][0])
+    import tensorflow as tf, numpy as np
+    inp = tf.constant(padded, dtype=tf.float32)
+    if hasattr(dl_model, 'predict'):
+        raw = dl_model.predict(padded, verbose=0)
+    else:
+        raw = dl_model.serve(inp).numpy()
+    p = float(raw[0][0])
     return p, 1-p
 
 # ─────────────────────────────────────────────
